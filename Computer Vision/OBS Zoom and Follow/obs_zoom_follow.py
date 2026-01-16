@@ -153,6 +153,38 @@ class ObjectTracker:
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
         return frame
+    
+    def transform_bbox_to_zoom_coords(self, bbox, frame_shape):
+        """
+        Transform bounding box coordinates from original frame to zoomed frame coordinates.
+        
+        Args:
+            bbox: Bounding box in original frame coordinates (x, y, w, h)
+            frame_shape: Shape of the original frame (height, width)
+            
+        Returns:
+            tuple: Transformed bounding box (x, y, w, h) in zoomed coordinates
+        """
+        if bbox is None or self.current_center is None:
+            return None
+        
+        h, w = frame_shape[:2]
+        roi_w = int(w / self.zoom_factor)
+        roi_h = int(h / self.zoom_factor)
+        
+        # Calculate the top-left corner of the ROI in original frame
+        x1 = int(self.current_center[0] - roi_w / 2)
+        y1 = int(self.current_center[1] - roi_h / 2)
+        
+        # Transform bbox to zoomed coordinate system
+        transformed_bbox = (
+            (bbox[0] - x1) * self.zoom_factor,
+            (bbox[1] - y1) * self.zoom_factor,
+            bbox[2] * self.zoom_factor,
+            bbox[3] * self.zoom_factor
+        )
+        
+        return transformed_bbox
 
 
 def main():
@@ -232,28 +264,9 @@ def main():
             # Apply zoom and follow effect
             processed_frame = tracker.apply_zoom_and_follow(frame)
             
-            # Draw tracking info on the zoomed frame
-            # Note: bbox coordinates are from original frame, need adjustment
-            if bbox is not None:
-                # Adjust bbox coordinates for display on zoomed frame
-                h, w = frame.shape[:2]
-                roi_w = int(w / tracker.zoom_factor)
-                roi_h = int(h / tracker.zoom_factor)
-                
-                x1 = int(tracker.current_center[0] - roi_w / 2)
-                y1 = int(tracker.current_center[1] - roi_h / 2)
-                
-                # Transform bbox to zoomed coordinate system
-                adjusted_bbox = (
-                    (bbox[0] - x1) * tracker.zoom_factor,
-                    (bbox[1] - y1) * tracker.zoom_factor,
-                    bbox[2] * tracker.zoom_factor,
-                    bbox[3] * tracker.zoom_factor
-                )
-                
-                processed_frame = tracker.draw_tracking_info(processed_frame, adjusted_bbox)
-            else:
-                processed_frame = tracker.draw_tracking_info(processed_frame, None)
+            # Transform bbox coordinates for display on zoomed frame
+            adjusted_bbox = tracker.transform_bbox_to_zoom_coords(bbox, frame.shape)
+            processed_frame = tracker.draw_tracking_info(processed_frame, adjusted_bbox)
         else:
             # Tracking failed
             processed_frame = frame.copy()
@@ -269,13 +282,11 @@ def main():
         if key == ord('q'):
             break
         elif key == ord('r'):
-            # Reselect object
-            ret, frame = cap.read()
-            if ret:
-                if tracker.select_roi(frame):
-                    print("New object selected!")
-                else:
-                    print("No object selected, continuing...")
+            # Reselect object using the current frame (no frame skip)
+            if tracker.select_roi(frame):
+                print("New object selected!")
+            else:
+                print("No object selected, continuing...")
     
     # Cleanup
     cap.release()

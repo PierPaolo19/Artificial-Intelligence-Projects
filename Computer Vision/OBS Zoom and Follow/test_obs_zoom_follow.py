@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import os
 import sys
+import tempfile
 
 
 def create_test_video(output_path, duration=10, fps=30):
@@ -62,7 +63,6 @@ def test_tracker_basic():
     print("=" * 50)
     
     # Import the tracker
-    sys.path.insert(0, os.path.dirname(__file__))
     from obs_zoom_follow import ObjectTracker
     
     # Test initialization
@@ -98,12 +98,11 @@ def test_zoom_follow_with_video():
     print("\nTest 2: Tracking with Synthetic Video")
     print("=" * 50)
     
-    # Create test video
-    test_video_path = "/tmp/test_tracking_video.mp4"
+    # Create test video in temp directory
+    test_video_path = os.path.join(tempfile.gettempdir(), "test_tracking_video.mp4")
     create_test_video(test_video_path, duration=5, fps=30)
     
     # Import the tracker
-    sys.path.insert(0, os.path.dirname(__file__))
     from obs_zoom_follow import ObjectTracker
     
     # Open the test video
@@ -171,7 +170,6 @@ def test_zoom_application():
     print("\nTest 3: Zoom and Follow Transformation")
     print("=" * 50)
     
-    sys.path.insert(0, os.path.dirname(__file__))
     from obs_zoom_follow import ObjectTracker
     
     # Create a test frame
